@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -287,6 +288,7 @@ func MyDialer() func(address string) (conn net.Conn, err error) {
 }
 
 func client(configuration *Configuration, result *Result, done *sync.WaitGroup) {
+	var __TXNID__ int64
 	for result.Requests < configuration.requests {
 		for _, tmpUrl := range configuration.urls {
 
@@ -296,7 +298,9 @@ func client(configuration *Configuration, result *Result, done *sync.WaitGroup) 
 			}
 			//randomTxnid := rand.Intn(1<<31 - 1)
 			randomTxnid := int64(rand.Int31n(1<<31 - 1))
-			updatedData := bytes.Replace(data, []byte("__TXNID__"), []byte(fmt.Sprintf("%d", randomTxnid)), 1)
+			updatedData := bytes.Replace(data, int64ToBytes(__TXNID__), int64ToBytes(randomTxnid), 1)
+
+			//updatedData := bytes.Replace(data, []byte("__TXNID__"), []byte(fmt.Sprintf("%d", randomTxnid)), 1)
 			req := fasthttp.AcquireRequest()
 
 			req.SetRequestURI(tmpUrl)
@@ -418,4 +422,10 @@ func main() {
 	done.Wait()
 	fmt.Println("wait is done")
 	printResults(results, startTime)
+}
+
+func int64ToBytes(n int64) []byte {
+	byteSlice := make([]byte, 8)
+	binary.BigEndian.PutUint64(byteSlice, uint64(n))
+	return byteSlice
 }
